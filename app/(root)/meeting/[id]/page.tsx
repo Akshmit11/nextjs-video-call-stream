@@ -19,11 +19,10 @@ const Meeting = () => {
   
   return (
     <div>
-      <h1 className="my-4">Meeting #id: {id}</h1>
       <StreamCall call={call}>
         <StreamTheme>
           {!isSetupComplete ? (
-            <MeetingSetup />
+            <MeetingSetup setIsSetupComplete={setIsSetupComplete} />
           ): (
             <MeetingRoom />
           )}
