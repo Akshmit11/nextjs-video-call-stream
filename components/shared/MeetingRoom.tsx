@@ -9,6 +9,7 @@ import {
   PaginatedGridLayout,
   SpeakerLayout,
   useCallStateHooks,
+  useParticipantViewContext,
 } from "@stream-io/video-react-sdk";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -23,6 +24,7 @@ import {
 import { Users, LayoutList } from "lucide-react";
 import EndCallButton from "./EndCallButton";
 import Loading from "./Loading";
+import { useUser } from "@clerk/nextjs";
 
 type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
@@ -36,6 +38,37 @@ const MeetingRoom = () => {
   const { useCallCallingState } = useCallStateHooks();
 
   const callingState = useCallCallingState();
+
+  const { user } = useUser();
+  
+  const CustomParticipantViewUIBar = () => {
+    const { participant } = useParticipantViewContext();
+  
+    return (
+      <div className="bar-participant-name">
+        {participant.name}
+      </div>
+    );
+  };
+  
+  const CustomParticipantViewUISpotlight = () => {
+    const { participant } = useParticipantViewContext();
+  
+    return (
+      <div className="spotlight-participant-name">
+        {participant.name}
+      </div>
+    );
+  };
+
+  const CustomParticipantViewUI = () => {
+    const { participant } = useParticipantViewContext();
+  
+    return (
+      <div className="participant-name">{participant.name}</div>
+    );
+  };
+
 
   if (callingState !== CallingState.JOINED) return <Loading />;
 
@@ -51,23 +84,14 @@ const MeetingRoom = () => {
   };
 
   return (
-    <section className="relative h-screen w-full overflow-hidden">
-      <div className="relative flex size-full items-center justify-center">
-        <div className="flex size-full max-w-[1000px] items-center text-white">
-          <CallLayout />
-        </div>
-        <div
-          className={cn("h-[calc(100vh-86px)] hidden ml-2 text-white", {
-            "show-block": showParticipants,
-          })}
-        >
-          <CallParticipantsList onClose={() => setShowParticipants(false)} />
-        </div>
+    <section className="relative flex-1 w-screen">
+      <div className="flex w-full items-center text-white gap-4">
+        <PaginatedGridLayout ParticipantViewUI={CustomParticipantViewUI} />
       </div>
 
-      <div className="fixed bottom-0 flex w-full items-center justify-center gap-5 flex-wrap">
+      <div className="fixed bottom-0 left-0 flex w-full items-center justify-center gap-5 flex-wrap bg-black">
         <CallControls onLeave={() => router.push(`/`)} />
-        <DropdownMenu>
+        {/* <DropdownMenu>
           <div className="flex items-center">
             <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
               <LayoutList size={20} className="text-white" />
@@ -87,13 +111,13 @@ const MeetingRoom = () => {
               </div>
             ))}
           </DropdownMenuContent>
-        </DropdownMenu>
-        <CallStatsButton />
-        <button onClick={() => setShowParticipants((prev) => !prev)}>
+        </DropdownMenu> */}
+        {/* <CallStatsButton /> */}
+        {/* <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
             <Users size={20} className="text-white" />
           </div>
-        </button>
+        </button> */}
         {!isPersonalRoom && <EndCallButton />}
       </div>
     </section>

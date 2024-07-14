@@ -12,14 +12,15 @@ import { Input } from "../ui/input";
 
 const MeetingType = () => {
   const router = useRouter();
-  const { user } = useUser();
   const { toast } = useToast();
+  const { user } = useUser();
   const client = useStreamVideoClient();
   const [values, setValues] = useState({
     dateTime: new Date(),
     description: "",
     link: "",
   });
+  
   const [callDetail, setCallDetail] = useState<Call>();
 
   const createMeeting = async () => {
@@ -45,16 +46,27 @@ const MeetingType = () => {
         values.description ||
         `Video Call With Expert #${Math.random().toFixed(2)}`;
       await call.getOrCreate({
+        members_limit: 2,
         data: {
           starts_at: startsAt,
           custom: {
             description,
           },
+          members: [
+            { user_id: "user_2j8iHLXTYFHiNRcrZGJAEC2EG75" },
+            { user_id: "user_2iwnXBrcJozloonMEv5qmxo7G4v" },
+          ],
+          settings_override: {
+            limits: {
+              max_duration_seconds: 3600,
+              max_participants: 2,
+            },
+          },
         },
       });
 
       setCallDetail(call);
-
+      // console.log(call);
       if (
         values.dateTime.toISOString() === new Date(Date.now()).toISOString()
       ) {
@@ -78,6 +90,7 @@ const MeetingType = () => {
   return (
     <div className="flex flex-col items-center">
       <CreateMeetingComponent createMeeting={createMeeting} />
+      
       {!callDetail ? (
         <MeetingModal handleClick={createMeeting}>
           <div className="flex w-full flex-col gap-2.5">
