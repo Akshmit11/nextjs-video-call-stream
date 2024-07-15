@@ -4,6 +4,7 @@ import {
   Call,
   DeviceSettings,
   MemberResponse,
+  OwnCapability,
   useCall,
   VideoPreview,
 } from "@stream-io/video-react-sdk";
@@ -25,8 +26,8 @@ const MeetingSetup = ({
   const [isMicCamToggleOn, setIsMicCamToggleOn] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [readyParticipants, setReadyParticipants] = useState(0);
-
   const { user, isLoaded } = useUser();
+
   useEffect(() => {
     const updateReadiness = async () => {
       if (members) {
@@ -41,6 +42,7 @@ const MeetingSetup = ({
                 },
               ],
             });
+            
           }
         } catch (error) {
           console.log("Error updating member readiness:", error);
@@ -59,7 +61,7 @@ const MeetingSetup = ({
           const readyCount = members.filter((member: any) => member.custom.ready).length;
           setReadyParticipants(readyCount);
 
-          if (readyCount === 2) {
+          if (readyCount > 0) {
             call.join();
             setIsSetupComplete(true);
           }
@@ -72,6 +74,16 @@ const MeetingSetup = ({
     const intervalId = setInterval(checkReadiness, 1000);
     return () => clearInterval(intervalId);
   }, [call, setIsSetupComplete, members]);
+
+  useEffect(() => {
+    if (isMicCamToggleOn) {
+      call?.camera.disable();
+      call?.microphone.disable();
+    } else {
+      call?.camera.enable();
+      call?.microphone.enable();
+    }
+  }, [isMicCamToggleOn, call?.camera, call?.microphone]);
 
   return (
     <div className="flex w-full flex-col items-center justify-center gap-3">

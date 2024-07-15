@@ -45,6 +45,7 @@ const MeetingType = () => {
       const description =
         values.description ||
         `Video Call With Expert #${Math.random().toFixed(2)}`;
+      
       await call.getOrCreate({
         members_limit: 2,
         data: {

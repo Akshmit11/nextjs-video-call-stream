@@ -1,124 +1,151 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { useUser } from "@clerk/nextjs";
 import {
   CallControls,
   CallingState,
-  CallParticipantsList,
-  CallStatsButton,
+  MemberResponse,
   PaginatedGridLayout,
   SpeakerLayout,
+  useCall,
   useCallStateHooks,
   useParticipantViewContext,
+  type VideoPlaceholderProps
 } from "@stream-io/video-react-sdk";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Users, LayoutList } from "lucide-react";
-import EndCallButton from "./EndCallButton";
+import { useEffect, useState } from "react";
+import { useToast } from "../ui/use-toast";
 import Loading from "./Loading";
-import { useUser } from "@clerk/nextjs";
 
 type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
-const MeetingRoom = () => {
+const MeetingRoom = ({
+  members,
+}: {
+  members: MemberResponse[] | undefined;
+}) => {
   const searchParams = useSearchParams();
-  const isPersonalRoom = !!searchParams.get('personal');
+  const isPersonalRoom = !!searchParams.get("personal");
   const [layout, setLayout] = useState<CallLayoutType>("speaker-left");
   const [showParticipants, setShowParticipants] = useState(false);
   const router = useRouter();
-
+  const { toast } = useToast();
   const { useCallCallingState } = useCallStateHooks();
-
   const callingState = useCallCallingState();
-
   const { user } = useUser();
-  
-  const CustomParticipantViewUIBar = () => {
-    const { participant } = useParticipantViewContext();
-  
-    return (
-      <div className="bar-participant-name">
-        {participant.name}
-      </div>
+  const call = useCall();
+  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [callDuration, setCallDuration] = useState<number>(0);
+  if (!call)
+    throw new Error(
+      "useStreamCall must be used within a StreamCall component."
     );
-  };
-  
-  const CustomParticipantViewUISpotlight = () => {
-    const { participant } = useParticipantViewContext();
-  
-    return (
-      <div className="spotlight-participant-name">
-        {participant.name}
-      </div>
-    );
-  };
 
-  const CustomParticipantViewUI = () => {
-    const { participant } = useParticipantViewContext();
-  
-    return (
-      <div className="participant-name">{participant.name}</div>
-    );
-  };
+    
+    const CustomParticipantViewUI = () => {
+      const { participant } = useParticipantViewContext();
+    
+      return (
+        <div className="participant-name">{participant.name}</div>
+      );
+    };
+    
+    const CustomVideoPlaceholder = ({ style }: VideoPlaceholderProps) => {
+      const { participant } = useParticipantViewContext();
+    
+      return (
+        <div className="video-placeholder" style={style}>
+          <img src={participant.image} alt={participant.name} />
+        </div>
+      );
+    };
 
+  const handleLeaveCall = async () => {
+    try {
+      if (timer) {
+        clearTimeout(timer);
+        setTimer(null);
+      }
 
-  if (callingState !== CallingState.JOINED) return <Loading />;
+      if (user) {
+          await call.updateCallMembers({
+            remove_members: [user.id],
+          });
+      }
+      await call.endCall();
+      toast({
+        title: "Meeting Ended",
+        description: `${callDuration} seconds`,
+      });
 
-  const CallLayout = () => {
-    switch (layout) {
-      case "grid":
-        return <PaginatedGridLayout />;
-      case "speaker-right":
-        return <SpeakerLayout participantsBarPosition="left" />;
-      default:
-        return <SpeakerLayout participantsBarPosition="right" />;
+      router.push("/");
+    } catch (error) {
+      console.error("Error leaving call:", error);
     }
   };
 
+  const startTimer = () => {
+    let startTime = Date.now();
+    setTimer(
+      setInterval(() => {
+        setCallDuration(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000)
+    );
+  };
+
+  useEffect(() => {
+    if (callingState === CallingState.JOINED) {
+      startTimer();
+    } else {
+      if (timer) {
+        clearTimeout(timer);
+        setTimer(null);
+      }
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+        setTimer(null);
+      }
+    };
+  }, [callingState]);
+
+  useEffect(() => {
+    const handleParticipantLeave = (event: any) => {
+      // Access call duration when participant leaves
+      console.log(`Call duration: ${callDuration} seconds`);
+      handleLeaveCall();
+    };
+
+    call.on("participantLeft", handleParticipantLeave);
+
+    return () => {
+      call.off("participantLeft", handleParticipantLeave);
+    };
+  }, [call, callDuration]);
+
+  if (callingState !== CallingState.JOINED) return <Loading />;
+
   return (
-    <section className="relative flex-1 w-screen">
-      <div className="flex w-full items-center text-white gap-4">
-        <PaginatedGridLayout ParticipantViewUI={CustomParticipantViewUI} />
+    <section className="relative flex-1 w-screen h-full flex items-center justify-center">
+      <div className="absolute top-4 right-4 z-999 bg-gray-800 text-white p-2 rounded">
+        Call Duration: {Math.floor(callDuration / 60)}:
+        {("0" + (callDuration % 60)).slice(-2)}
       </div>
 
-      <div className="fixed bottom-0 left-0 flex w-full items-center justify-center gap-5 flex-wrap bg-black">
-        <CallControls onLeave={() => router.push(`/`)} />
-        {/* <DropdownMenu>
-          <div className="flex items-center">
-            <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
-              <LayoutList size={20} className="text-white" />
-            </DropdownMenuTrigger>
+      <div className="text-white w-screen ">
+          <div className="md:hidden">
+            <SpeakerLayout participantsBarLimit={2} />
           </div>
-          <DropdownMenuContent className="border-dark-1 bg-dark-1 text-white">
-            {["Grid", "Speaker-Left", "Speaker-Right"].map((item, index) => (
-              <div key={index}>
-                <DropdownMenuItem
-                  onClick={() =>
-                    setLayout(item.toLowerCase() as CallLayoutType)
-                  }
-                >
-                  {item}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="border-dark-1" />
-              </div>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu> */}
-        {/* <CallStatsButton /> */}
-        {/* <button onClick={() => setShowParticipants((prev) => !prev)}>
-          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
-            <Users size={20} className="text-white" />
+          <div className="hidden md:flex">
+            <PaginatedGridLayout pageArrowsVisible={false} VideoPlaceholder={CustomVideoPlaceholder} ParticipantViewUI={CustomParticipantViewUI} />
           </div>
-        </button> */}
-        {!isPersonalRoom && <EndCallButton />}
+      </div>
+
+      <div className="absolute bottom-0 md:bottom-1 w-full md:w-fit md:rounded-full bg-[#004AAD] px-4 flex items-center justify-center flex-wrap">
+        <CallControls onLeave={handleLeaveCall} />
       </div>
     </section>
   );

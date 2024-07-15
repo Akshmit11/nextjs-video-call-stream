@@ -5,7 +5,12 @@ import MeetingRoom from "@/components/shared/MeetingRoom";
 import MeetingSetup from "@/components/shared/MeetingSetup";
 import { useGetCallById } from "@/hooks/useGetCallById";
 import { useUser } from "@clerk/nextjs";
-import { MemberResponse, StreamCall, StreamTheme } from "@stream-io/video-react-sdk";
+import {
+  MemberResponse,
+  OwnCapability,
+  StreamCall,
+  StreamTheme,
+} from "@stream-io/video-react-sdk";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -19,7 +24,7 @@ const Meeting = () => {
 
   useEffect(() => {
     const checkParticipants = async () => {
-      if (call) {
+      if (call && user) {
         try {
           const { members } = await call.queryMembers({});
           setParticipantsCount(members.length);
@@ -37,9 +42,9 @@ const Meeting = () => {
   if (!isLoaded || isCallLoading) return <Loading />;
 
   return (
-    <div>
+    <div className="flex-1">
       <StreamCall call={call}>
-        <StreamTheme>
+        <StreamTheme className="h-full">
           {!isSetupComplete && call ? (
             <MeetingSetup
               setIsSetupComplete={setIsSetupComplete}
@@ -48,7 +53,7 @@ const Meeting = () => {
               call={call}
             />
           ) : (
-            <MeetingRoom />
+            <MeetingRoom members={members} />
           )}
         </StreamTheme>
       </StreamCall>
