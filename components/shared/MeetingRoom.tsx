@@ -10,7 +10,7 @@ import {
   useCall,
   useCallStateHooks,
   useParticipantViewContext,
-  type VideoPlaceholderProps
+  type VideoPlaceholderProps,
 } from "@stream-io/video-react-sdk";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -42,24 +42,27 @@ const MeetingRoom = ({
       "useStreamCall must be used within a StreamCall component."
     );
 
-    
-    const CustomParticipantViewUI = () => {
-      const { participant } = useParticipantViewContext();
-    
-      return (
-        <div className="participant-name">{participant.name}</div>
-      );
-    };
-    
-    const CustomVideoPlaceholder = ({ style }: VideoPlaceholderProps) => {
-      const { participant } = useParticipantViewContext();
-    
-      return (
-        <div className="video-placeholder" style={style}>
-          <img src={participant.image} alt={participant.name} />
-        </div>
-      );
-    };
+  const CustomParticipantViewUI = () => {
+    const { participant } = useParticipantViewContext();
+
+    return (
+      <div className="bg-black rounded-md">
+        <h1 className="z-[999] text-white absolute bottom-1 left-1 capitalize">
+          {user?.fullName}
+        </h1>
+      </div>
+    );
+  };
+
+  const CustomVideoPlaceholder = ({ style }: VideoPlaceholderProps) => {
+    const { participant } = useParticipantViewContext();
+
+    return (
+      <div className="video-placeholder" style={style}>
+        <img src={participant.image} alt={participant.name} />
+      </div>
+    );
+  };
 
   const handleLeaveCall = async () => {
     try {
@@ -69,9 +72,9 @@ const MeetingRoom = ({
       }
 
       if (user) {
-          await call.updateCallMembers({
-            remove_members: [user.id],
-          });
+        await call.updateCallMembers({
+          remove_members: [user.id],
+        });
       }
       await call.endCall();
       toast({
@@ -135,13 +138,38 @@ const MeetingRoom = ({
         {("0" + (callDuration % 60)).slice(-2)}
       </div>
 
-      <div className="text-white w-screen ">
-          <div className="md:hidden">
-            <SpeakerLayout participantsBarLimit={2} />
-          </div>
-          <div className="hidden md:flex">
-            <PaginatedGridLayout pageArrowsVisible={false} VideoPlaceholder={CustomVideoPlaceholder} ParticipantViewUI={CustomParticipantViewUI} />
-          </div>
+      <div className="text-white w-screen p-4">
+        <div className="md:hidden w-full">
+          <SpeakerLayout
+            participantsBarLimit={2}
+            ParticipantViewUIBar={() => {
+              const { participant } = useParticipantViewContext();
+              return (
+                <div className="bg-black rounded-md">
+                  <h1 className="z-[999] text-white absolute bottom-1 left-1 capitalize">
+                    {user?.fullName}
+                  </h1>
+                </div>
+              );
+            }}
+            ParticipantViewUISpotlight={() => {
+              const { participant } = useParticipantViewContext();
+              return (
+                <div className="bg-black rounded-md">
+                  <h1 className="z-[999] text-white absolute bottom-1 left-1 capitalize">
+                    {user?.fullName}
+                  </h1>
+                </div>
+              );
+            }}
+          />
+        </div>
+        <div className="hidden md:flex">
+          <PaginatedGridLayout
+            pageArrowsVisible={false}
+            ParticipantViewUI={CustomParticipantViewUI}
+          />
+        </div>
       </div>
 
       <div className="absolute bottom-0 md:bottom-1 w-full md:w-fit md:rounded-full bg-[#004AAD] px-4 flex items-center justify-center flex-wrap">

@@ -44,7 +44,7 @@ const Meeting = () => {
   return (
     <div className="flex-1">
       <StreamCall call={call}>
-        <StreamTheme className="h-full">
+        <StreamTheme className="h-full flex items-center justify-center">
           {!isSetupComplete && call ? (
             <MeetingSetup
               setIsSetupComplete={setIsSetupComplete}
